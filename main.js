@@ -2,13 +2,13 @@
 import { getCookie } from "https://cdn.jsdelivr.net/gh/jscroot/cookie@0.0.1/croot.js";
 import { getJSON } from "https://cdn.jsdelivr.net/gh/jscroot/api@0.0.7/croot.js";
 
-// Get approval ID from URL hash
-const approvalId = window.location.hash.substring(1); // Remove # from hash
+// Get event ID from URL hash
+const eventId = window.location.hash.substring(1); // Remove # from hash
 
 // Backend URLs
 const backend = {
-    getApprovalDetails: `https://asia-southeast2-awangga.cloudfunctions.net/domyid/api/event/approval/${approvalId}`,
-    updateApproval: `https://asia-southeast2-awangga.cloudfunctions.net/domyid/api/event/approval/${approvalId}`
+    getApprovalDetails: `https://asia-southeast2-awangga.cloudfunctions.net/domyid/api/event/approval/${eventId}`,
+    updateApproval: `https://asia-southeast2-awangga.cloudfunctions.net/domyid/api/event/approval/${eventId}`
 };
 
 // DOM Elements
@@ -42,9 +42,9 @@ let approvalData = null;
 // Initialize page
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Event Approval Page Loaded');
-    console.log('Approval ID:', approvalId);
+    console.log('Event ID:', eventId);
 
-    if (!approvalId) {
+    if (!eventId) {
         showNoData();
         return;
     }
@@ -246,12 +246,12 @@ function hideAllMessages() {
 
 // Export for debugging
 window.eventApproval = {
-    approvalId,
+    eventId,
     approvalData,
     loadApprovalDetails,
     handleApproval
 };
 
 console.log('Event Approval System Loaded');
-console.log('Approval ID:', approvalId);
+console.log('Event ID:', eventId);
 console.log('Available functions: window.eventApproval');
