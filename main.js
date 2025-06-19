@@ -1,232 +1,102 @@
-// Event Approval System Main JavaScript
+// Event Approval System - Mengikuti pola kambing-main
 
-// Configuration
-const CONFIG = {
-    backend: {
-        approveEvent: 'https://asia-southeast2-awangga.cloudfunctions.net/domyid/api/event/approve',
-        getClaimDetails: 'https://asia-southeast2-awangga.cloudfunctions.net/domyid/api/event/claim/'
-    },
-    ownerToken: 'owner-token' // This should be properly implemented with real authentication
-};
+import {setInner, onClick, getValue} from "https://cdn.jsdelivr.net/gh/jscroot/element@0.1.5/croot.js";
+import {getHash} from "https://cdn.jsdelivr.net/gh/jscroot/url@0.0.9/croot.js";
+import {get, postWithToken} from "https://cdn.jsdelivr.net/gh/jscroot/api@0.0.6/croot.js";
+import {getCookie} from "https://cdn.jsdelivr.net/gh/jscroot/cookie@0.0.1/croot.js";
 
-// Global variables
-let claimId = null;
-let claimData = null;
+// Ambil data dan jalankan 2 fungsi callback sekaligus (mengikuti pola kambing)
+const API_URL = "https://asia-southeast2-awangga.cloudfunctions.net/domyid/data/event/approval/" + getHash()
 
-// DOM Elements
-const elements = {
-    loadingState: document.getElementById('loadingState'),
-    errorState: document.getElementById('errorState'),
-    errorMessage: document.getElementById('errorMessage'),
-    approvalContent: document.getElementById('approvalContent'),
-    successState: document.getElementById('successState'),
-    loadingModal: document.getElementById('loadingModal'),
-    approveBtn: document.getElementById('approveBtn'),
-    
-    // Event info
-    eventName: document.getElementById('eventName'),
-    eventDescription: document.getElementById('eventDescription'),
-    eventPoints: document.getElementById('eventPoints'),
-    
-    // User info
-    userName: document.getElementById('userName'),
-    userNPM: document.getElementById('userNPM'),
-    userPhone: document.getElementById('userPhone'),
-    userEmail: document.getElementById('userEmail'),
-    
-    // Task info
-    taskLinkDisplay: document.getElementById('taskLinkDisplay'),
-    taskLinkButton: document.getElementById('taskLinkButton'),
-    submittedAt: document.getElementById('submittedAt'),
-    deadline: document.getElementById('deadline'),
-    
-    // Success info
-    approvedUserName: document.getElementById('approvedUserName'),
-    approvedEventName: document.getElementById('approvedEventName'),
-    approvedPoints: document.getElementById('approvedPoints')
-};
+get(API_URL, handleEventApprovalResponse, runAfterGet);
 
-// Initialize application
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Event Approval System initialized');
-    
-    // Get claim ID from URL hash
-    claimId = getClaimIdFromUrl();
-    
-    if (!claimId) {
-        showError('Invalid claim ID in URL. Please check the approval link.');
+// Setup event listener untuk tombol approve
+onClick("approveBtn", runOnApproval);
+
+function runAfterGet(result) {
+    console.log("🔍 Raw data:", result);
+    setInner("eventName", result.eventname || "N/A");
+    setInner("eventDescription", result.description || "N/A");
+    setInner("eventPoints", result.points || "0");
+    setInner("userName", result.username || "N/A");
+    setInner("userNPM", result.npm || "N/A");
+    setInner("userPhone", result.phonenumber || "N/A");
+    setInner("userEmail", result.email || "N/A");
+
+    // Set task link
+    const taskLinkDisplay = document.getElementById("taskLinkDisplay");
+    const taskLinkButton = document.getElementById("taskLinkButton");
+    if (taskLinkDisplay && taskLinkButton) {
+        taskLinkDisplay.value = result.tasklink || "N/A";
+        taskLinkButton.href = result.tasklink || "#";
+    }
+
+    // Set dates
+    setInner("submittedAt", formatDate(result.submittedat));
+    setInner("deadline", formatDate(result.deadline));
+}
+
+function handleEventApprovalResponse(result) {
+    if (result.status && result.status.includes("Error")) {
+        showError(result.status + ": " + result.response);
         return;
     }
-    
-    console.log('Claim ID:', claimId);
-    
-    // Load claim details
-    loadClaimDetails();
-    
-    // Setup event listeners
-    setupEventListeners();
-});
 
-// Get claim ID from URL hash
-function getClaimIdFromUrl() {
-    const hash = window.location.hash.replace('#', '');
-    if (hash && hash !== '') {
-        return hash;
-    }
-    
-    // Fallback: check URL parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    const claimParam = urlParams.get('claim');
-    if (claimParam) {
-        return claimParam;
-    }
-    
-    return null;
-}
-
-// Setup event listeners
-function setupEventListeners() {
-    // Approve button
-    elements.approveBtn.addEventListener('click', handleApprove);
-    
-    // Keyboard shortcuts
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            window.close();
-        }
-        if (e.key === 'Enter' && e.ctrlKey) {
-            handleApprove();
-        }
-    });
-}
-
-// Load claim details (mock implementation for now)
-async function loadClaimDetails() {
-    try {
-        showLoading(true);
-        
-        // For now, we'll show the approval form directly
-        // In a real implementation, you would fetch claim details from API
-        
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Mock data - replace with actual API call
-        claimData = {
-            event: {
-                name: 'Event Task #' + claimId.substring(0, 8),
-                description: 'Event task yang perlu di-approve oleh owner',
-                points: 100
-            },
-            user: {
-                name: 'Student User',
-                npm: '2023001',
-                phone: '628123456789',
-                email: 'student@example.com'
-            },
-            taskLink: 'https://github.com/user/sample-project',
-            submittedAt: new Date().toLocaleString('id-ID'),
-            deadline: new Date(Date.now() + 3600000).toLocaleString('id-ID') // 1 hour from now
-        };
-        
-        displayClaimDetails();
-        
-    } catch (error) {
-        console.error('Error loading claim details:', error);
-        showError('Failed to load claim details: ' + error.message);
-    } finally {
-        showLoading(false);
-    }
-}
-
-// Display claim details
-function displayClaimDetails() {
-    if (!claimData) {
-        showError('No claim data available');
+    if (result.approved || result.isapproved) {
+        showError('Tugas ini sudah di-approve sebelumnya');
         return;
     }
-    
-    // Populate event information
-    elements.eventName.textContent = claimData.event.name;
-    elements.eventDescription.textContent = claimData.event.description;
-    elements.eventPoints.textContent = claimData.event.points;
-    
-    // Populate user information
-    elements.userName.textContent = claimData.user.name;
-    elements.userNPM.textContent = claimData.user.npm;
-    elements.userPhone.textContent = claimData.user.phone;
-    elements.userEmail.textContent = claimData.user.email;
-    
-    // Populate task information
-    elements.taskLinkDisplay.value = claimData.taskLink;
-    elements.taskLinkButton.href = claimData.taskLink;
-    elements.submittedAt.textContent = claimData.submittedAt;
-    elements.deadline.textContent = claimData.deadline;
-    
+
+    if (result.status !== "submitted") {
+        showError('Tugas belum di-submit oleh user. Status: ' + result.status);
+        return;
+    }
+
+    console.log("📋 Response masuk:", result);
+
     // Show approval content
-    elements.loadingState.style.display = 'none';
-    elements.approvalContent.style.display = 'block';
-    elements.approvalContent.classList.add('fade-in');
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('approvalContent').style.display = 'block';
 }
 
-// Handle approve action
-async function handleApprove() {
-    if (!claimId) {
-        showError('No claim ID available');
-        return;
-    }
-    
-    // Confirm action
-    if (!confirm('Are you sure you want to approve this task? This action cannot be undone.')) {
-        return;
-    }
-    
-    try {
-        showLoadingModal(true);
-        elements.approveBtn.disabled = true;
-        
-        const response = await fetch(CONFIG.backend.approveEvent, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'login': CONFIG.ownerToken
-            },
-            body: JSON.stringify({
-                claim_id: claimId
-            })
-        });
-        
-        const result = await response.json();
-        
-        if (response.ok && (result.status === 'Success' || result.Status === 'Success')) {
-            showSuccess(result.data || result);
-        } else {
-            throw new Error(result.response || result.Response || 'Unknown error occurred');
-        }
-        
-    } catch (error) {
-        console.error('Error approving task:', error);
-        showError('Failed to approve task: ' + error.message);
-    } finally {
-        showLoadingModal(false);
-        elements.approveBtn.disabled = false;
+function runOnApproval() {
+    const tombol = document.getElementById('approveBtn');
+    const feedbackDiv = document.getElementById('feedback');
+
+    tombol.disabled = true;
+    feedbackDiv.style.display = 'block';
+    feedbackDiv.className = 'notification is-info';
+
+    let approvalData = {
+        approved: true,
+        komentar: "Event task approved by owner"
+    };
+
+    setInner("feedback", "Mohon tunggu sebentar data sedang diproses...");
+    postWithToken(API_URL, "login", getCookie("login"), approvalData, responseFunction);
+}
+
+function responseFunction(result) {
+    console.log("✅ Approval response:", result);
+    if (result.Status === "Success" || result.status === "Success") {
+        showSuccess(result);
+    } else {
+        showError("Error: " + (result.Response || result.response || "Unknown error"));
     }
 }
 
-// Show success state
-function showSuccess(data) {
-    elements.approvalContent.style.display = 'none';
-    
-    // Populate success information
-    if (claimData) {
-        elements.approvedUserName.textContent = claimData.user.name;
-        elements.approvedEventName.textContent = claimData.event.name;
-        elements.approvedPoints.textContent = claimData.event.points;
-    }
-    
-    elements.successState.style.display = 'block';
-    elements.successState.classList.add('slide-up');
-    
+function showSuccess(result) {
+    // Hide approval content
+    document.getElementById('approvalContent').style.display = 'none';
+
+    // Show success state
+    document.getElementById('successState').style.display = 'block';
+
+    // Update success information
+    setInner("approvedUserName", result.user || "User");
+    setInner("approvedEventName", result.event || "Event");
+    setInner("approvedPoints", result.points || "0");
+
     // Auto-close after 10 seconds
     setTimeout(() => {
         if (confirm('Approval successful! Close this window?')) {
@@ -235,64 +105,33 @@ function showSuccess(data) {
     }, 10000);
 }
 
-// Show error state
 function showError(message) {
-    elements.loadingState.style.display = 'none';
-    elements.approvalContent.style.display = 'none';
-    elements.errorMessage.textContent = message;
-    elements.errorState.style.display = 'block';
-    elements.errorState.classList.add('fade-in');
-}
-
-// Show/hide loading state
-function showLoading(show) {
-    elements.loadingState.style.display = show ? 'block' : 'none';
-    if (show) {
-        elements.loadingState.classList.add('fade-in');
-    }
-}
-
-// Show/hide loading modal
-function showLoadingModal(show) {
-    if (show) {
-        elements.loadingModal.classList.add('is-active');
-    } else {
-        elements.loadingModal.classList.remove('is-active');
-    }
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('approvalContent').style.display = 'none';
+    document.getElementById('errorMessage').textContent = message;
+    document.getElementById('errorState').style.display = 'block';
 }
 
 // Utility functions
 function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+
     const date = new Date(dateString);
+
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+        return 'Invalid Date';
+    }
+
     return date.toLocaleString('id-ID', {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
+        timeZone: 'Asia/Jakarta'
     });
 }
 
-function validateUrl(string) {
-    try {
-        new URL(string);
-        return true;
-    } catch (_) {
-        return false;
-    }
-}
-
-// Export for debugging
-window.EventApproval = {
-    CONFIG,
-    claimId,
-    claimData,
-    elements,
-    loadClaimDetails,
-    handleApprove,
-    showSuccess,
-    showError
-};
-
 console.log('Event Approval System loaded successfully');
-console.log('Claim ID from URL:', claimId);
+console.log('Claim ID from URL:', getHash());
