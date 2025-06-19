@@ -1,257 +1,307 @@
-// Event Approval Main JavaScript
-import { getCookie } from "https://cdn.jsdelivr.net/gh/jscroot/cookie@0.0.1/croot.js";
-import { getJSON } from "https://cdn.jsdelivr.net/gh/jscroot/api@0.0.7/croot.js";
+// Event Approval System Main JavaScript
 
-// Get event ID from URL hash
-const eventId = window.location.hash.substring(1); // Remove # from hash
-
-// Backend URLs
-const backend = {
-    getApprovalDetails: `https://asia-southeast2-awangga.cloudfunctions.net/domyid/api/event/approval/${eventId}`,
-    updateApproval: `https://asia-southeast2-awangga.cloudfunctions.net/domyid/api/event/approval/${eventId}`
+// Configuration
+const CONFIG = {
+    backend: {
+        approveEvent: 'https://asia-southeast2-awangga.cloudfunctions.net/domyid/api/event/approve',
+        getClaimDetails: 'https://asia-southeast2-awangga.cloudfunctions.net/domyid/api/event/claim/'
+    },
+    ownerToken: 'owner-token' // This should be properly implemented with real authentication
 };
+
+// Global variables
+let claimId = null;
+let claimData = null;
 
 // DOM Elements
 const elements = {
-    studentName: document.getElementById('student-name'),
-    eventName: document.getElementById('event-name'),
-    eventPoints: document.getElementById('event-points'),
-    eventDescription: document.getElementById('event-description'),
-    userName: document.getElementById('user-name'),
-    userPhone: document.getElementById('user-phone'),
-    userEmail: document.getElementById('user-email'),
-    submittedAt: document.getElementById('submitted-at'),
-    taskLink: document.getElementById('task-link'),
-    openTaskBtn: document.getElementById('open-task-btn'),
-    claimedAt: document.getElementById('claimed-at'),
-    timerDuration: document.getElementById('timer-duration'),
-    approveBtn: document.getElementById('approve-btn'),
-    rejectBtn: document.getElementById('reject-btn'),
-    approvalComment: document.getElementById('approval-comment'),
-    loadingMessage: document.getElementById('loading-message'),
-    successMessage: document.getElementById('success-message'),
-    errorMessage: document.getElementById('error-message'),
-    noDataMessage: document.getElementById('no-data-message'),
-    successText: document.getElementById('success-text'),
-    errorText: document.getElementById('error-text')
+    loadingState: document.getElementById('loadingState'),
+    errorState: document.getElementById('errorState'),
+    errorMessage: document.getElementById('errorMessage'),
+    approvalContent: document.getElementById('approvalContent'),
+    successState: document.getElementById('successState'),
+    loadingModal: document.getElementById('loadingModal'),
+    approveBtn: document.getElementById('approveBtn'),
+    
+    // Event info
+    eventName: document.getElementById('eventName'),
+    eventDescription: document.getElementById('eventDescription'),
+    eventPoints: document.getElementById('eventPoints'),
+    
+    // User info
+    userName: document.getElementById('userName'),
+    userNPM: document.getElementById('userNPM'),
+    userPhone: document.getElementById('userPhone'),
+    userEmail: document.getElementById('userEmail'),
+    
+    // Task info
+    taskLinkDisplay: document.getElementById('taskLinkDisplay'),
+    taskLinkButton: document.getElementById('taskLinkButton'),
+    submittedAt: document.getElementById('submittedAt'),
+    
+    // Success info
+    approvedUserName: document.getElementById('approvedUserName'),
+    approvedEventName: document.getElementById('approvedEventName'),
+    approvedPoints: document.getElementById('approvedPoints')
 };
 
-// Global approval data
-let approvalData = null;
-
-// Initialize page
-document.addEventListener('DOMContentLoaded', async () => {
-    console.log('Event Approval Page Loaded');
-    console.log('Event ID:', eventId);
-
-    if (!eventId) {
-        showNoData();
+// Initialize application
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Event Approval System initialized');
+    
+    // Get claim ID from URL
+    claimId = getClaimIdFromUrl();
+    
+    if (!claimId || claimId === 'index.html') {
+        showError('Invalid claim ID in URL. Please check the approval link.');
         return;
     }
-
-    await loadApprovalDetails();
-    setupEventHandlers();
+    
+    console.log('Claim ID:', claimId);
+    
+    // Load claim details
+    loadClaimDetails();
+    
+    // Setup event listeners
+    setupEventListeners();
 });
 
-// Load approval details from backend
-async function loadApprovalDetails() {
-    try {
-        showLoading();
+// Get claim ID from URL parameters
+function getClaimIdFromUrl() {
+    // Check URL parameters first
+    const urlParams = new URLSearchParams(window.location.search);
+    const claimParam = urlParams.get('claim');
+    if (claimParam) {
+        return claimParam;
+    }
 
-        const response = await getJSON(backend.getApprovalDetails, 'login', getCookie('login'));
+    // Fallback: check path segments
+    const urlPath = window.location.pathname;
+    const segments = urlPath.split('/');
 
-        if (response.status === 'Success') {
-            approvalData = response.data;
-            populateApprovalDetails(approvalData);
-            hideAllMessages();
-        } else {
-            console.error('Failed to load approval details:', response);
-            showNoData();
+    // Expected format: /event/{claimId} or /{claimId}
+    if (segments.length >= 2) {
+        const lastSegment = segments[segments.length - 1];
+        if (lastSegment && lastSegment !== 'index.html' && lastSegment !== '') {
+            return lastSegment;
         }
-    } catch (error) {
-        console.error('Error loading approval details:', error);
-        showError('Error loading approval details: ' + error.message);
     }
+
+    // Fallback: check hash
+    const hash = window.location.hash.replace('#', '');
+    if (hash) {
+        return hash;
+    }
+
+    return null;
 }
 
-// Populate page with approval details
-function populateApprovalDetails(data) {
-    // Student and user information
-    elements.studentName.textContent = data.username || 'Unknown';
-    elements.userName.textContent = data.username || 'Unknown';
-    elements.userPhone.textContent = data.userphone || 'Unknown';
-    elements.userEmail.textContent = data.useremail || 'Unknown';
-
-    // Event information
-    elements.eventName.textContent = data.eventname || 'Unknown Event';
-    elements.eventPoints.textContent = (data.eventpoints || 0) + ' Points';
-    elements.eventDescription.textContent = 'Event Task Submission'; // Simple description
-
-    // Task information
-    if (data.tasklink) {
-        elements.taskLink.href = data.tasklink;
-        elements.taskLink.textContent = data.tasklink;
-        elements.openTaskBtn.onclick = () => window.open(data.tasklink, '_blank');
-    } else {
-        elements.taskLink.textContent = 'No task link provided';
-        elements.openTaskBtn.disabled = true;
-    }
-
-    // Timing information
-    elements.submittedAt.textContent = formatDate(data.createdat);
-    elements.claimedAt.textContent = formatDate(data.createdat);
-    elements.timerDuration.textContent = 'Event Task';
-
-    // Store approval ID for approval actions
-    elements.approveBtn.dataset.approvalId = data._id;
-    elements.rejectBtn.dataset.approvalId = data._id;
+// Setup event listeners
+function setupEventListeners() {
+    // Approve button
+    elements.approveBtn.addEventListener('click', handleApprove);
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            window.close();
+        }
+        if (e.key === 'Enter' && e.ctrlKey) {
+            handleApprove();
+        }
+    });
 }
 
-// Setup event handlers
-function setupEventHandlers() {
-    elements.approveBtn.addEventListener('click', () => handleApproval(true));
-    elements.rejectBtn.addEventListener('click', () => handleApproval(false));
-}
-
-// Handle approval/rejection (seperti bimbingan)
-async function handleApproval(isApproved) {
-    const button = isApproved ? elements.approveBtn : elements.rejectBtn;
-    const approvalId = button.dataset.approvalId;
-    const comment = elements.approvalComment.value.trim();
-
-    if (!approvalId) {
-        showError('Approval ID tidak ditemukan');
-        return;
-    }
-
-    // Confirm action
-    const action = isApproved ? 'approve' : 'reject';
-    const confirmMessage = `Are you sure you want to ${action} this task?`;
-    if (!confirm(confirmMessage)) {
-        return;
-    }
-
-    // Show loading
-    showLoading();
-    button.disabled = true;
-
+// Load claim details (mock implementation)
+async function loadClaimDetails() {
     try {
-        // Prepare approval data (seperti bimbingan)
-        const approvalUpdate = {
-            approved: isApproved,
-            validasi: isApproved ? 5 : 1, // Default rating
-            komentar: comment || (isApproved ? 'Task approved' : 'Task rejected')
+        showLoading(true);
+        
+        // For now, we'll show the approval form directly
+        // In a real implementation, you would fetch claim details from API
+        
+        // Simulate API delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Mock data - replace with actual API call
+        claimData = {
+            event: {
+                name: 'Sample Event',
+                description: 'This is a sample event for testing approval system',
+                points: 100
+            },
+            user: {
+                name: 'John Doe',
+                npm: '2023001',
+                phone: '628123456789',
+                email: 'john.doe@example.com'
+            },
+            taskLink: 'https://github.com/user/sample-project',
+            submittedAt: new Date().toLocaleString('id-ID')
         };
+        
+        displayClaimDetails();
+        
+    } catch (error) {
+        console.error('Error loading claim details:', error);
+        showError('Failed to load claim details: ' + error.message);
+    } finally {
+        showLoading(false);
+    }
+}
 
-        const response = await fetch(backend.updateApproval, {
-            method: 'PUT',
+// Display claim details
+function displayClaimDetails() {
+    if (!claimData) {
+        showError('No claim data available');
+        return;
+    }
+    
+    // Populate event information
+    elements.eventName.textContent = claimData.event.name;
+    elements.eventDescription.textContent = claimData.event.description;
+    elements.eventPoints.textContent = claimData.event.points;
+    
+    // Populate user information
+    elements.userName.textContent = claimData.user.name;
+    elements.userNPM.textContent = claimData.user.npm;
+    elements.userPhone.textContent = claimData.user.phone;
+    elements.userEmail.textContent = claimData.user.email;
+    
+    // Populate task information
+    elements.taskLinkDisplay.value = claimData.taskLink;
+    elements.taskLinkButton.href = claimData.taskLink;
+    elements.submittedAt.textContent = claimData.submittedAt;
+    
+    // Show approval content
+    elements.loadingState.style.display = 'none';
+    elements.approvalContent.style.display = 'block';
+    elements.approvalContent.classList.add('fade-in');
+}
+
+// Handle approve action
+async function handleApprove() {
+    if (!claimId) {
+        showError('No claim ID available');
+        return;
+    }
+    
+    // Confirm action
+    if (!confirm('Are you sure you want to approve this task? This action cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        showLoadingModal(true);
+        elements.approveBtn.disabled = true;
+        
+        const response = await fetch(CONFIG.backend.approveEvent, {
+            method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'login': getCookie('login')
+                'login': CONFIG.ownerToken
             },
-            body: JSON.stringify(approvalUpdate)
+            body: JSON.stringify({
+                claim_id: claimId
+            })
         });
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const responseData = await response.json();
-
-        if (responseData) {
-            const actionText = isApproved ? 'approved' : 'rejected';
-            const message = `Task has been ${actionText} successfully!`;
-
-            if (isApproved) {
-                showSuccess(`${message} Student will receive ${approvalData.eventpoints} points.`);
-
-                // Redirect to approved page after 2 seconds
-                setTimeout(() => {
-                    window.location.href = `approved.html?event=${encodeURIComponent(approvalData.eventname)}&points=${approvalData.eventpoints}`;
-                }, 2000);
-            } else {
-                showSuccess(message);
-
-                // Redirect after 2 seconds
-                setTimeout(() => {
-                    window.location.href = `approved.html?event=${encodeURIComponent(approvalData.eventname)}&rejected=true`;
-                }, 2000);
-            }
-
-            // Hide approval buttons after action
-            elements.approveBtn.style.display = 'none';
-            elements.rejectBtn.style.display = 'none';
-            elements.approvalComment.disabled = true;
-
+        
+        const result = await response.json();
+        
+        if (result.status === 'Success') {
+            showSuccess(result.data);
         } else {
-            showError('Failed to process approval');
-            button.disabled = false;
+            throw new Error(result.response || 'Unknown error occurred');
         }
+        
     } catch (error) {
-        console.error('Error processing approval:', error);
-        showError('Error: ' + error.message);
-        button.disabled = false;
+        console.error('Error approving task:', error);
+        showError('Failed to approve task: ' + error.message);
+    } finally {
+        showLoadingModal(false);
+        elements.approveBtn.disabled = false;
     }
 }
 
-// Utility functions for date formatting
-function formatDate(dateString) {
-    if (!dateString) return 'Unknown';
-    try {
-        const date = new Date(dateString);
-        return date.toLocaleString('id-ID', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    } catch (error) {
-        return dateString;
+// Show success state
+function showSuccess(data) {
+    elements.approvalContent.style.display = 'none';
+    
+    // Populate success information
+    if (claimData) {
+        elements.approvedUserName.textContent = claimData.user.name;
+        elements.approvedEventName.textContent = claimData.event.name;
+        elements.approvedPoints.textContent = claimData.event.points;
     }
+    
+    elements.successState.style.display = 'block';
+    elements.successState.classList.add('slide-up');
+    
+    // Auto-close after 10 seconds
+    setTimeout(() => {
+        if (confirm('Approval successful! Close this window?')) {
+            window.close();
+        }
+    }, 10000);
 }
 
-// Message display functions
-function showLoading() {
-    hideAllMessages();
-    elements.loadingMessage.style.display = 'block';
-}
-
-function showSuccess(message) {
-    hideAllMessages();
-    elements.successText.textContent = message;
-    elements.successMessage.style.display = 'block';
-}
-
+// Show error state
 function showError(message) {
-    hideAllMessages();
-    elements.errorText.textContent = message;
-    elements.errorMessage.style.display = 'block';
+    elements.loadingState.style.display = 'none';
+    elements.approvalContent.style.display = 'none';
+    elements.errorMessage.textContent = message;
+    elements.errorState.style.display = 'block';
+    elements.errorState.classList.add('fade-in');
 }
 
-function showNoData() {
-    hideAllMessages();
-    elements.noDataMessage.style.display = 'block';
-
-    // Hide approval section
-    document.querySelector('.approval-section').style.display = 'none';
+// Show/hide loading state
+function showLoading(show) {
+    elements.loadingState.style.display = show ? 'block' : 'none';
+    if (show) {
+        elements.loadingState.classList.add('fade-in');
+    }
 }
 
-function hideAllMessages() {
-    elements.loadingMessage.style.display = 'none';
-    elements.successMessage.style.display = 'none';
-    elements.errorMessage.style.display = 'none';
-    elements.noDataMessage.style.display = 'none';
+// Show/hide loading modal
+function showLoadingModal(show) {
+    if (show) {
+        elements.loadingModal.classList.add('is-active');
+    } else {
+        elements.loadingModal.classList.remove('is-active');
+    }
+}
+
+// Utility functions
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleString('id-ID', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function validateUrl(string) {
+    try {
+        new URL(string);
+        return true;
+    } catch (_) {
+        return false;
+    }
 }
 
 // Export for debugging
-window.eventApproval = {
-    eventId,
-    approvalData,
-    loadApprovalDetails,
-    handleApproval
+window.EventApproval = {
+    CONFIG,
+    claimId,
+    claimData,
+    elements,
+    loadClaimDetails,
+    handleApprove,
+    showSuccess,
+    showError
 };
 
-console.log('Event Approval System Loaded');
-console.log('Event ID:', eventId);
-console.log('Available functions: window.eventApproval');
+console.log('Event Approval System loaded successfully');

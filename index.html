@@ -1,167 +1,204 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 
 <head>
 	<meta charset="utf-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
 	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-	<meta name="description" content="Event Task Approval">
-	<meta name="author" content="Event Management">
-	<meta name="keywords" content="event, task, approval, domyikado">
+	<meta name="description" content="Event Approval System">
+	<meta name="author" content="Domyikado">
+	<meta name="keywords" content="event, approval, domyikado">
 
 	<link rel="preconnect" href="https://fonts.gstatic.com">
-	<link rel="shortcut icon" href="src/img/icons/logodomykado.png" />
+	<link rel="shortcut icon" href="https://www.do.my.id/favicon.ico" />
 
-	<link rel="canonical" href="https://www.do.my.id/" />
+	<link rel="canonical" href="https://www.do.my.id/event/" />
 
-	<title>Event Task Approval - Domyikado</title>
+	<title>Event Approval - Domyikado</title>
 
-	<link href="static/css/app.css" rel="stylesheet">
+	<link href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css" rel="stylesheet">
+	<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/5.0.0/normalize.min.css">
     <link rel="stylesheet" href="main.css">  
 </head>
 
 <body>
-	<div class="wrapper">
-		<div class="main">
-			<!-- Navbar Start -->
-			<nav class="navbar navbar-expand navbar-light navbar-bg">
-                <img src="" alt="">
-                <img src="src/img/icons/logodomykado.png" alt="" style="width: 40px; margin-right: 5px;">
-                <a class="mt-2 h4"><b>Event Task Approval</b></a>
-			</nav>
-			<!-- Navbar End -->
-      <div class="container">
-        <!-- Judul -->
-  <h1 class="title" style="margin-top: 30px;">Event Task Approval</h1>
-  <h1 class="name" style="margin-top: 30px;">Mahasiswa: <span id="student-name">Loading...</span></h1>
+	<div class="container">
+		<div class="section">
+			<!-- Header -->
+			<div class="has-text-centered mb-6">
+				<h1 class="title is-2">
+					<i class="fas fa-check-circle has-text-success"></i>
+					Event Approval
+				</h1>
+				<p class="subtitle">Sistem Persetujuan Tugas Event Domyikado</p>
+			</div>
 
-  <!-- Event Information -->
-  <div class="event-info" style="background-color: #e8f4fd; padding: 1rem; border-radius: 8px; margin: 20px 0;">
-    <h3><b>📋 Event Information</b></h3>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 10px;">
-      <div>
-        <strong>Event Name:</strong> <span id="event-name">Loading...</span>
-      </div>
-      <div>
-        <strong>Points Reward:</strong> <span id="event-points">Loading...</span>
-      </div>
-    </div>
-    <div style="margin-top: 10px;">
-      <strong>Description:</strong> <span id="event-description">Loading...</span>
-    </div>
-  </div>
+			<!-- Loading State -->
+			<div class="has-text-centered" id="loadingState">
+				<div class="box">
+					<i class="fas fa-spinner fa-spin fa-2x has-text-primary"></i>
+					<p class="mt-3">Memuat data approval...</p>
+				</div>
+			</div>
 
-  <!-- User Information -->
-  <div class="user-info" style="background-color: #f5f5f5; padding: 1rem; border-radius: 8px; margin: 20px 0;">
-    <h3><b>👤 Student Information</b></h3>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 10px;">
-      <div>
-        <strong>Name:</strong> <span id="user-name">Loading...</span>
-      </div>
-      <div>
-        <strong>Phone:</strong> <span id="user-phone">Loading...</span>
-      </div>
-    </div>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 10px;">
-      <div>
-        <strong>Email:</strong> <span id="user-email">Loading...</span>
-      </div>
-      <div>
-        <strong>Submitted At:</strong> <span id="submitted-at">Loading...</span>
-      </div>
-    </div>
-  </div>
+			<!-- Error State -->
+			<div class="notification is-danger" id="errorState" style="display: none;">
+				<h4 class="title is-4">
+					<i class="fas fa-exclamation-triangle"></i> Error
+				</h4>
+				<p id="errorMessage"></p>
+				<div class="buttons mt-4">
+					<button class="button is-light" onclick="window.close()">
+						<i class="fas fa-times"></i> Close Window
+					</button>
+				</div>
+			</div>
 
-  <!-- Task Link -->
-  <div class="task-section" style="background-color: #fff3cd; padding: 1rem; border-radius: 8px; margin: 20px 0;">
-    <h3><b>🔗 Submitted Task</b></h3>
-    <div style="margin-top: 10px;">
-      <strong>Task Link:</strong>
-      <div style="margin-top: 5px;">
-        <a id="task-link" href="#" target="_blank" style="word-break: break-all; color: #007bff; text-decoration: underline;">
-          Loading...
-        </a>
-      </div>
-      <div style="margin-top: 10px;">
-        <button type="button" id="open-task-btn" class="button" style="background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
-          🔗 Open Task Link
-        </button>
-      </div>
-    </div>
-  </div>
+			<!-- Approval Content -->
+			<div id="approvalContent" style="display: none;">
+				<div class="columns is-centered">
+					<div class="column is-8">
+						<!-- Event Information -->
+						<div class="box event-info">
+							<h3 class="title is-4">
+								<i class="fas fa-calendar-star has-text-primary"></i> 
+								Informasi Event
+							</h3>
+							<div class="columns">
+								<div class="column">
+									<div class="field">
+										<label class="label">Nama Event:</label>
+										<p class="content" id="eventName">Loading...</p>
+									</div>
+									<div class="field">
+										<label class="label">Deskripsi:</label>
+										<p class="content" id="eventDescription">Loading...</p>
+									</div>
+								</div>
+								<div class="column is-narrow">
+									<div class="has-text-centered">
+										<div class="box has-background-primary has-text-white">
+											<p class="title is-4 has-text-white" id="eventPoints">0</p>
+											<p class="subtitle is-6 has-text-white">Poin</p>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
 
-  <!-- Timer Information -->
-  <div class="timer-info" style="background-color: #d1ecf1; padding: 1rem; border-radius: 8px; margin: 20px 0;">
-    <h3><b>⏰ Claim Information</b></h3>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 10px;">
-      <div>
-        <strong>Claimed At:</strong> <span id="claimed-at">Loading...</span>
-      </div>
-      <div>
-        <strong>Timer Duration:</strong> <span id="timer-duration">Loading...</span>
-      </div>
-    </div>
-  </div>
+						<!-- Student Information -->
+						<div class="box user-info">
+							<h3 class="title is-4">
+								<i class="fas fa-user has-text-info"></i> 
+								Informasi Mahasiswa
+							</h3>
+							<div class="columns">
+								<div class="column">
+									<div class="field">
+										<label class="label">Nama:</label>
+										<p class="content" id="userName">Loading...</p>
+									</div>
+									<div class="field">
+										<label class="label">NPM:</label>
+										<p class="content" id="userNPM">Loading...</p>
+									</div>
+								</div>
+								<div class="column">
+									<div class="field">
+										<label class="label">Phone:</label>
+										<p class="content" id="userPhone">Loading...</p>
+									</div>
+									<div class="field">
+										<label class="label">Email:</label>
+										<p class="content" id="userEmail">Loading...</p>
+									</div>
+								</div>
+							</div>
+						</div>
 
-  <!-- Approval Section -->
-  <div class="approval-section" style="margin-top: 30px;">
-    <h3 style="text-align: center; margin-bottom: 20px;"><b>Berikan Keputusan Approval</b></h3>
-    
-    <!-- Approval Buttons -->
-    <div style="display: flex; gap: 20px; justify-content: center; margin: 20px 0;">
-      <button type="button" id="approve-btn" class="button" style="background-color: #28a745; color: white; padding: 15px 30px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold;">
-        ✅ Approve & Give Points
-      </button>
-      <button type="button" id="reject-btn" class="button" style="background-color: #dc3545; color: white; padding: 15px 30px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold;">
-        ❌ Reject Task
-      </button>
-    </div>
+						<!-- Task Information -->
+						<div class="box task-info">
+							<h3 class="title is-4">
+								<i class="fas fa-link has-text-warning"></i> 
+								Tugas yang Disubmit
+							</h3>
+							<div class="field">
+								<label class="label">Link Tugas:</label>
+								<div class="field has-addons">
+									<div class="control is-expanded">
+										<input class="input" type="text" id="taskLinkDisplay" readonly>
+									</div>
+									<div class="control">
+										<a class="button is-link" id="taskLinkButton" href="#" target="_blank">
+											<i class="fas fa-external-link-alt"></i>
+											<span>Buka Link</span>
+										</a>
+									</div>
+								</div>
+							</div>
+							<div class="field">
+								<label class="label">Waktu Submit:</label>
+								<p class="content" id="submittedAt">Loading...</p>
+							</div>
+						</div>
 
-    <!-- Comments Section -->
-    <div style="margin-top: 20px;">
-      <label for="approval-comment" style="display: block; margin-bottom: 5px; font-weight: bold;">
-        💬 Comments (Optional):
-      </label>
-      <textarea id="approval-comment" placeholder="Tambahkan komentar untuk mahasiswa..." 
-                style="width: 100%; min-height: 80px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; resize: vertical;"></textarea>
-    </div>
-  </div>
+						<!-- Approval Actions -->
+						<div class="box has-text-centered">
+							<h3 class="title is-4 mb-4">Aksi Approval</h3>
+							<div class="buttons is-centered">
+								<button class="button is-success is-large" id="approveBtn">
+									<i class="fas fa-check"></i>
+									<span>Approve Tugas</span>
+								</button>
+								<button class="button is-light is-large" onclick="window.close()">
+									<i class="fas fa-times"></i>
+									<span>Cancel</span>
+								</button>
+							</div>
+							<p class="help has-text-grey">
+								Pastikan Anda telah mereview tugas sebelum melakukan approval
+							</p>
+						</div>
+					</div>
+				</div>
+			</div>
 
-  <!-- Status Messages -->
-  <div id="loading-message" style="text-align: center; margin: 20px 0; display: none;">
-    <div style="display: inline-block; padding: 10px 20px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 5px;">
-      ⏳ Processing approval...
-    </div>
-  </div>
-
-  <div id="success-message" style="text-align: center; margin: 20px 0; display: none;">
-    <div style="display: inline-block; padding: 10px 20px; background-color: #d4edda; border: 1px solid #c3e6cb; border-radius: 5px; color: #155724;">
-      ✅ <span id="success-text">Task approved successfully!</span>
-    </div>
-  </div>
-
-  <div id="error-message" style="text-align: center; margin: 20px 0; display: none;">
-    <div style="display: inline-block; padding: 10px 20px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 5px; color: #721c24;">
-      ❌ <span id="error-text">Error processing approval</span>
-    </div>
-  </div>
-
-  <div id="no-data-message" style="text-align: center; margin: 20px 0; display: none;">
-    <div style="display: inline-block; padding: 20px; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; color: #856404;">
-      ⚠️ Tidak ada data submission yang ditemukan atau claim ID tidak valid.<br>
-      Pastikan link approval yang Anda akses benar.
-    </div>
-  </div>
-
-        </div>
-        <!-- Content End -->
-
-        <!-- Footer End -->
+			<!-- Success State -->
+			<div class="notification is-success" id="successState" style="display: none;">
+				<div class="has-text-centered">
+					<h4 class="title is-3">
+						<i class="fas fa-check-circle"></i> Success!
+					</h4>
+					<p class="subtitle">Tugas telah berhasil di-approve</p>
+					<div class="box has-background-success-light">
+						<p class="content">
+							<strong>Mahasiswa:</strong> <span id="approvedUserName"></span><br>
+							<strong>Event:</strong> <span id="approvedEventName"></span><br>
+							<strong>Poin yang diberikan:</strong> <span id="approvedPoints"></span> poin
+						</p>
+					</div>
+					<div class="buttons is-centered mt-4">
+						<button class="button is-primary is-large" onclick="window.close()">
+							<i class="fas fa-check"></i> Close Window
+						</button>
+					</div>
+				</div>
+			</div>
 		</div>
 	</div>
-	<script src="static/js/app.js"></script>
+
+	<!-- Loading Overlay -->
+	<div class="modal" id="loadingModal">
+		<div class="modal-background"></div>
+		<div class="modal-content">
+			<div class="box has-text-centered">
+				<i class="fas fa-spinner fa-spin fa-2x has-text-primary"></i>
+				<p class="mt-3">Processing approval...</p>
+			</div>
+		</div>
+	</div>
+
     <script type="module" async src="main.js"></script>
 </body>
 
