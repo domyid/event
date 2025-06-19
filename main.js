@@ -38,6 +38,7 @@ const elements = {
     taskLinkDisplay: document.getElementById('taskLinkDisplay'),
     taskLinkButton: document.getElementById('taskLinkButton'),
     submittedAt: document.getElementById('submittedAt'),
+    deadline: document.getElementById('deadline'),
     
     // Success info
     approvedUserName: document.getElementById('approvedUserName'),
@@ -49,10 +50,10 @@ const elements = {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Event Approval System initialized');
     
-    // Get claim ID from URL
+    // Get claim ID from URL hash
     claimId = getClaimIdFromUrl();
     
-    if (!claimId || claimId === 'index.html') {
+    if (!claimId) {
         showError('Invalid claim ID in URL. Please check the approval link.');
         return;
     }
@@ -66,33 +67,20 @@ document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
 });
 
-// Get claim ID from URL parameters
+// Get claim ID from URL hash
 function getClaimIdFromUrl() {
-    // Check URL parameters first
+    const hash = window.location.hash.replace('#', '');
+    if (hash && hash !== '') {
+        return hash;
+    }
+    
+    // Fallback: check URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     const claimParam = urlParams.get('claim');
     if (claimParam) {
         return claimParam;
     }
-
-    // Fallback: check path segments
-    const urlPath = window.location.pathname;
-    const segments = urlPath.split('/');
-
-    // Expected format: /event/{claimId} or /{claimId}
-    if (segments.length >= 2) {
-        const lastSegment = segments[segments.length - 1];
-        if (lastSegment && lastSegment !== 'index.html' && lastSegment !== '') {
-            return lastSegment;
-        }
-    }
-
-    // Fallback: check hash
-    const hash = window.location.hash.replace('#', '');
-    if (hash) {
-        return hash;
-    }
-
+    
     return null;
 }
 
@@ -112,7 +100,7 @@ function setupEventListeners() {
     });
 }
 
-// Load claim details (mock implementation)
+// Load claim details (mock implementation for now)
 async function loadClaimDetails() {
     try {
         showLoading(true);
@@ -126,18 +114,19 @@ async function loadClaimDetails() {
         // Mock data - replace with actual API call
         claimData = {
             event: {
-                name: 'Sample Event',
-                description: 'This is a sample event for testing approval system',
+                name: 'Event Task #' + claimId.substring(0, 8),
+                description: 'Event task yang perlu di-approve oleh owner',
                 points: 100
             },
             user: {
-                name: 'John Doe',
+                name: 'Student User',
                 npm: '2023001',
                 phone: '628123456789',
-                email: 'john.doe@example.com'
+                email: 'student@example.com'
             },
             taskLink: 'https://github.com/user/sample-project',
-            submittedAt: new Date().toLocaleString('id-ID')
+            submittedAt: new Date().toLocaleString('id-ID'),
+            deadline: new Date(Date.now() + 3600000).toLocaleString('id-ID') // 1 hour from now
         };
         
         displayClaimDetails();
@@ -172,6 +161,7 @@ function displayClaimDetails() {
     elements.taskLinkDisplay.value = claimData.taskLink;
     elements.taskLinkButton.href = claimData.taskLink;
     elements.submittedAt.textContent = claimData.submittedAt;
+    elements.deadline.textContent = claimData.deadline;
     
     // Show approval content
     elements.loadingState.style.display = 'none';
@@ -208,10 +198,10 @@ async function handleApprove() {
         
         const result = await response.json();
         
-        if (result.status === 'Success') {
-            showSuccess(result.data);
+        if (response.ok && (result.status === 'Success' || result.Status === 'Success')) {
+            showSuccess(result.data || result);
         } else {
-            throw new Error(result.response || 'Unknown error occurred');
+            throw new Error(result.response || result.Response || 'Unknown error occurred');
         }
         
     } catch (error) {
@@ -305,3 +295,4 @@ window.EventApproval = {
 };
 
 console.log('Event Approval System loaded successfully');
+console.log('Claim ID from URL:', claimId);
